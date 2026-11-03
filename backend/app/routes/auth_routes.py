@@ -33,10 +33,22 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
             "login.html", {"request": request, "error": "Invalid password for this account."}
         )
 
+    
     token = create_session(user["id"])
+
     resp = RedirectResponse("/dashboard", status_code=302)
-    resp.set_cookie("session_token", token)
+
+    resp.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        secure=False,  # Local development uses HTTP
+        samesite="lax",
+        path="/",
+    )
+
     return resp
+
 
 
 @router.get("/register", response_class=HTMLResponse)
