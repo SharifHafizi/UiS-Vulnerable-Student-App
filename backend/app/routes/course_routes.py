@@ -17,17 +17,21 @@ def courses(request: Request):
     return templates.TemplateResponse("courses.html", {"request": request, "user": user, "courses": course_rows})
 
 
+
 @router.get("/courses/search", response_class=HTMLResponse)
 def search_courses(request: Request, q: str = ""):
     user = get_user_from_session(request)
     if not user:
         return RedirectResponse("/login", status_code=302)
 
-    sql = f"SELECT * FROM courses WHERE title ILIKE '%{q}%' ORDER BY id"
+    # Use a parameterized query to prevent SQL injection.
+    sql = "SELECT * FROM courses WHERE title ILIKE %s ORDER BY id"
+    search_pattern = f"%{q}%"
+
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, (search_pattern,))
             rows = cur.fetchall()
             cols = [d[0] for d in cur.description]
             courses = [dict(zip(cols, r)) for r in rows]
@@ -35,7 +39,13 @@ def search_courses(request: Request, q: str = ""):
         conn.close()
 
     return templates.TemplateResponse(
-        "courses.html", {"request": request, "user": user, "courses": courses, "search_query": q}
+        "courses.html",
+        {
+            "request": request,
+            "user": user,
+            "courses": courses,
+            "search_query": q,
+        },
     )
 
 
